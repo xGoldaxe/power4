@@ -12,6 +12,8 @@ router.post('/join', useAuth, gameCtrl.join);
 router.post('/information', gameCtrl.information);
 router.post('/play', useAuth, gamePlay.play);
 router.post('/allmoves', gamePlay.allmoves);
+router.post('/isingame', gameCtrl.isInGame);
+
 
 
 

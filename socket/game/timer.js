@@ -1,12 +1,8 @@
 const getGameState = require('../../lib/game/getGameState').getGameState;
 const Game = require('../../models/Game');
 //create the timer
+const { setNewRank } = require('../../lib/game/setNewRank');
 
-//timer every secondes: call the db, modfiy it, and then send a socket to the user //done
-//if time goes to 0 : new db modification then destroy the timer
-//if someone win the game : destroy the timer
-
-//that mean the interval will alway destroy himself
 exports.createGameTimer = async function (socket, gameId){
     const timer = setInterval(async ()=>{
         let gameState = await getGameState(gameId);
@@ -14,16 +10,16 @@ exports.createGameTimer = async function (socket, gameId){
         if(gameState.moves.length > 0) {
             //while nobody win
             if(!gameState.winner) {
-                if(gameState.playerTurn === gameState.host) {
+                if(gameState.playerTurn === gameState.host.id) {
                     gameState.time.host --;
                     if(gameState.time.host === 0) {
-                        gameState.winner = gameState.opponent;
+                        gameState.winner = gameState.opponent.id;
                         clearInterval(timer);
                     }
                 } else {
                     gameState.time.opponent --;
                     if(gameState.time.opponent === 0) {
-                        gameState.winner = gameState.host;
+                        gameState.winner = gameState.host.id;
                         clearInterval(timer);
                     }
                 }
@@ -31,30 +27,31 @@ exports.createGameTimer = async function (socket, gameId){
                 clearInterval(timer)
             }
     
-            Game.updateOne({ _id: gameState._id}, {
+            await Game.updateOne({ _id: gameState._id}, {
                 winner: gameState.winner,
                 time: gameState.time
             })
-                .then(() => {socket.to(gameState._id).emit('gameState', {game : gameState});})//the time has been veryified so its ok
+            if(gameState.winner) {
+                await setNewRank(gameState.winner, gameState)
+            }
+            const game = await Game.findById(gameState._id)
+            socket.to(gameState._id).emit('gameState', game);
         } else {
             Game.updateOne({ _id: gameState._id}, {
                 afkAdvertisor: gameState.afkAdvertisor += -1
             })
-                .then(() => {socket.to(gameState._id).emit('gameState', {game: gameState});})
+                .then(() => {socket.to(gameState._id).emit('gameState', gameState);})
             if(gameState.afkAdvertisor <= 0) {
                 let winner;
-                if(gameState.playerTurn === gameState.host) {
-                    winner = gameState.opponent
+                if(gameState.playerTurn === gameState.host.id) {
+                    winner = gameState.opponent.id
                 } else {
-                    winner = gameState.host
+                    winner = gameState.host.id
                 }
-                Game.updateOne({_id: gameState._id},{
-                    winner: winner
-                })
-                    .then(() => {
-                        socket.to(gameState._id).emit('gameState', {game: {...gameState, winner: winner}});
-                        clearInterval(timer);
-                    })
+                await setNewRank(winner, gameState)
+                const game = await Game.findById(gameState._id)
+                socket.to(gameState._id).emit('gameState', game);
+                clearInterval(timer);
             }
         }
     }, 1000) 

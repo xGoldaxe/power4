@@ -1,6 +1,7 @@
 const http = require('http');
-const { connection } = require('mongoose');
 const app = require('./app');
+
+console.log(process.env.NODE_ENV);
 
 const normalizePort = val => {
   const port = parseInt(val, 10);

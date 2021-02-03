@@ -5,18 +5,23 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 exports.signup = (req, res, next) => {
-    bcrypt.hash(req.body.password, 10)
+    if(req.body.pseudo >= 3 && req.body.pseudo <= 12 && req.body.password >= 4 && req.body.password <= 20) {
+        bcrypt.hash(req.body.password, 10)
         .then(hash => {
         const user = new User({
             pseudo: req.body.pseudo,
             password: hash,
-            rank: '0'
+            rank: 0
         });
         user.save()
             .then(() => res.status(201).json({ message: 'Utilisateur créé !' }))
             .catch(error => res.status(400).json({ error }));
         })
         .catch(error => res.status(500).json({ error }));
+    } else {
+        res.status(401).json({ error: 'error' })
+    }
+
 };
 
 
@@ -35,7 +40,7 @@ exports.login = (req, res, next) => {
                         userId: user._id,
                         token: jwt.sign(
                             { userId: user._id },
-                            'RANDOM_TOKEN_SECRET',
+                            process.env.TOKEN__SEED,
                             { expiresIn: '12h' }
                         )
                     });
@@ -62,8 +67,17 @@ exports.informationpseudo = (req, res, next) => {
         .then(user => {     
             return res.status(200).json({
                 pseudo : user.pseudo,
-                rank: user.rank
+                rank: user.rank,
+                id : user._id
             })
         })
         .catch(error => res.status(404).json({ error:'utilisateur non touvé' }));
+}
+
+exports.getPseudoById = (userId) => {
+    User.findById(userId)
+        .then(user => {
+            return user.pseudo
+        })
+        .catch(error => {return false});
 }

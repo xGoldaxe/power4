@@ -6,8 +6,8 @@
 //when a game is find => delete the player from the matchmaking => create a game => send to the both player room 'matchmaking:playerId' 
 const Matchmaking = require('../models/Matchmaking');
 const Game = require('../models/Game');
-const { send } = require('process');
 const { createGameTimer } = require('../socket/game/timer');
+const User = require('../models/User');
 
 exports.matchmaking = function(socket) {
     setInterval(()=>{
@@ -38,11 +38,22 @@ async function createGame(socket, player1, player2, time) {
         playerId: player2.playerId
     })
     //now create a game with the correct information + mode
-    console.log('ranked well created')
+    const hostInfo = await User.findById(host.playerId);
+    const opponentInfo = await User.findById(opponent.playerId);
     const game = new Game({
         gameType : 'ranked',
-        host : host.playerId,
-        opponent : opponent.playerId,
+        host : {
+            id : host.playerId,
+            pseudo : hostInfo.pseudo,
+            actualRank : hostInfo.rank,
+            newRank : null
+        },
+        opponent : {
+            id : opponent.playerId,
+            pseudo :  opponentInfo.pseudo,
+            actualRank : opponentInfo.rank,
+            newRank : null
+        },
         moves: [],
         playerTurn: host.playerId,
         winner: null,
@@ -51,7 +62,8 @@ async function createGame(socket, player1, player2, time) {
             host : time,
             opponent : time
         },
-        afkAdvertisor: 45
+        afkAdvertisor: 45,
+        date: new Date()
     });
     const gameInfo = await game.save()
     socket.to('matchmaking:' + player1.playerId).emit('gameStart', gameInfo._id)

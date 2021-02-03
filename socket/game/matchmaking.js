@@ -1,8 +1,5 @@
 const fetch = require('node-fetch');
 const Matchmaking = require('../../models/Matchmaking');
-const gameCtrl = require('../../controllers/game');
-const { use } = require('../../routes/user');
-const User = require('../../models/User');
 const { isInGame } = require('../../lib/game/isInGame');
 
 exports.joinMatchmaking = function (socket, io) {
@@ -12,7 +9,7 @@ exports.joinMatchmaking = function (socket, io) {
             const data = {
                 userId: socketData.userId
             }
-            let dataResult = await fetch('http://localhost:8080/api/auth/matchmaking/join', {
+            let dataResult = await fetch(`${process.env.API_PATH}/api/auth/matchmaking/join`, {
                 headers: {
                     "Content-type": "application/json;charset=UTF-8",
                     'Accept': 'application/json',

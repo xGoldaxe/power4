@@ -2,8 +2,10 @@ const { json } = require('body-parser');
 const { resolve } = require('path');
 
 const Game = require('../models/Game');
+const User = require('../models/User');
 const play = require('./play');
-
+const getPseudoById = require('../lib/user/getPseudoById').getPseudoById;
+const isInGame = require('../lib/game/isInGame').isInGame
 
 exports.listgames = (req, res, next) => {
     Game.find()    
@@ -11,11 +13,22 @@ exports.listgames = (req, res, next) => {
         .catch(error => res.status(400).json({ error }));
 }
 
-exports.create = (req, res, next) => {
+exports.create = async(req, res, next) => {
+    const user = await User.findById(req.body.userId)
     const game = new Game({
         gameType : 'normal game',
-        host : req.body.userId,
-        opponent : null,
+        host : {
+            id : req.body.userId,
+            pseudo : await getPseudoById(req.body.userId),
+            actualRank : user.rank,
+            newRank : null
+        },
+        opponent : {
+            id : null,
+            pseudo: null,
+            actualRank : null,
+            newRank : null
+        },
         moves: [],
         playerTurn: null,
         winner: null,
@@ -24,7 +37,8 @@ exports.create = (req, res, next) => {
             host : req.body.time,
             opponent : req.body.time
         },
-        afkAdvertisor: 45
+        afkAdvertisor: 45,
+        date: new Date()
     });
     game.save()
         .then(() => {
@@ -35,13 +49,14 @@ exports.create = (req, res, next) => {
 
 exports.join = (req, res, next) => {
     Game.findById(req.body.gameId)
-        .then(game => {
-            if(game.opponent){
+        .then(async game => {
+            if(game.opponent.id){
                 res.status(400).json({ error: 'The game is already full' });
             }
             else if(game.host !== req.body.userId){
                 Game.updateOne({ _id: game._id}, {
-                    opponent: req.body.userId
+                    'opponent.id': req.body.userId,
+                    'opponent.pseudo' : await getPseudoById(req.body.userId),
                 })
                     .then(() => {
                         res.status(200).json({ game });
@@ -71,15 +86,26 @@ exports.gameStart = (gameId, resolve) => {
         const ranInt = Math.round(Math.random());
         let firstTurnId = null
         if(ranInt === 0) {
-            firstTurnId = game.host;
+            firstTurnId = game.host.id;
         } else {
-            firstTurnId = game.opponent;
+            firstTurnId = game.opponent.id;
         }
         Game.updateOne({ _id: game._id}, {
             playerTurn: firstTurnId
         }).then(()=>{
-            console.log('well updated');
             resolve('ok');
         })
     })
+}
+
+
+exports.isInGame = async (req,res,next) => {
+
+    gameInfo = await isInGame(req.body.userId)
+    
+    if(gameInfo !== false) {
+        res.status(200).json({ gameInfo });
+    } else {
+        res.status(400);
+    }
 }

@@ -16,7 +16,7 @@ exports.playMove = (socket, io) => {
             gameId: socketData.gameId,
             move: socketData.move
         }
-        const response = await fetch('http://localhost:8080/api/auth/game/play', {
+        const response = await fetch(`${process.env.API_PATH}/api/auth/game/play`, {
             headers: {
                 "Content-type": "application/json;charset=UTF-8",
                 'Accept': 'application/json',
@@ -25,9 +25,10 @@ exports.playMove = (socket, io) => {
             method: "POST",
             body: JSON.stringify(data)
         })
+
         if(response.status === 201) {
             const resultJson = await getGameState(data.gameId);
-            io.to(socketData.gameId).emit('gameState', resultJson);
+            io.to(socketData.gameId).emit('gameState', resultJson.game);
         }
     })
 }
