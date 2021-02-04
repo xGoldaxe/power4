@@ -38,7 +38,11 @@ exports.login = (req, res, next) => {
                     }
                     res.status(200).json({
                         userId: user._id,
-                        token: 'token'
+                        token: jwt.sign(
+                            { userId: user._id },
+                            process.env.TOKEN_SEED,
+                            { expiresIn: '12h' }
+                        )
                     });
                 })
                 .catch(error => res.status(401).json({ error }));
