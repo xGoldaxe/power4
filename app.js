@@ -18,12 +18,26 @@ app.use((req, res, next) => {
     next();
   });
 
+let dbConnection;
 mongoose.connect(process.env.DB_LOGIN,
   { useNewUrlParser: true,
     useUnifiedTopology: true })
-  .then(() => console.log('Connexion à MongoDB réussie !'))
-  .catch(() => console.log('Connexion à MongoDB échouée !'));
+  .then(() => {
+    console.log('Connexion à MongoDB réussie !');
+    dbConnection = true;
+  })
+  .catch(() => {
+    console.log('Connexion à MongoDB échouée !');
+    dbConnection = false;
+  });
 
+app.use('/api/test', (req, res, next) => {
+  if(dbConnection) {
+    res.status(200).json({ message : 'connected well' })
+  } else {
+    res.status(400).json({ error : 'connection failed' })
+  }
+})
 
 app.use('/api/auth/game', gameRoutes);
 app.use('/api/auth/historic', historicRoutes);
