@@ -40,7 +40,7 @@ const errorHandler = error => {
 const server = http.createServer(app);
 const io = require('socket.io')(server, {
   cors: {
-    origin: "http://localhost:3001",
+    origin: "https://puissance4.pierreevl.com/",
     methods: ["GET", "POST"]
   }
 });
